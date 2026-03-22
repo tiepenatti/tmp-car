@@ -1,70 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>88012 Car Controller</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #222; color: #fff; }
-        .grid { display: grid; grid-template-columns: 100px 100px 100px; gap: 10px; justify-content: center; }
-        button { padding: 20px; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; background: #444; color: white; }
-        button:active { background: #00ff00; }
-        #connect { background: #007bff; margin-bottom: 30px; padding: 15px 30px; }
-        .status { margin-top: 20px; color: #aaa; }
-    </style>
-</head>
-<body>
-    <h1>Lego 88012 Control</h1>
-    <button id="connect">Connect to LEGO Hub</button>
-    
-    <div class="grid">
-        <div></div><button onmousedown="sendMove(50, 50)" onmouseup="sendStop()">FWD</button><div></div>
-        <button onmousedown="sendMove(-50, 50)" onmouseup="sendStop()">LEFT</button>
-        <button onmousedown="sendStop()" style="background:red">STOP</button>
-        <button onmousedown="sendMove(50, -50)" onmouseup="sendStop()">RIGHT</button>
-        <div></div><button onmousedown="sendMove(-50, -50)" onmouseup="sendStop()">BWD</button><div></div>
-    </div>
-
-    <p class="status" id="status">Status: Disconnected</p>
-
-    <script>
-        let characteristic = null;
-        const SERVICE_UUID = "00001623-1212-efde-1623-785feabcd123";
-        const CHARACTERISTIC_UUID = "00001624-1212-efde-1623-785feabcd123";
-
-        // Ports for 88012 are usually 0, 1, 2, 3 (labeled A, B, C, D)
-        // Adjust these if your motors are in different ports
-        const PORT_A = 0x00; 
-        const PORT_B = 0x01;
-
-        async function connect() {
-            try {
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [SERVICE_UUID] }]
-                });
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-                document.getElementById('status').innerText = "Status: Connected to " + device.name;
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').innerText = "Status: Error - " + err;
-            }
-        }
-
-        // LEGO LWP3 Command to set motor power
-        async function sendMove(speedA, speedB) {
-            if (!characteristic) return;
-            // Command format: [Length, HubID (0), MessageType (0x81), Port, ExecutionInfo (0x11), SubCommand (0x51), Mode (0), Speed]
-            const cmdA = new Uint8Array([0x08, 0x00, 0x81, PORT_A, 0x11, 0x51, 0x00, speedA]);
-            const cmdB = new Uint8Array([0x08, 0x00, 0x81, PORT_B, 0x11, 0x51, 0x00, speedB]);
-            await characteristic.writeValue(cmdA);
-            await characteristic.writeValue(cmdB);
-        }
-
-        async function sendStop() {
-            await sendMove(0, 0);
-        }
-
-        document.getElementById('connect').addEventListener('click', connect);
-    </script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>src</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

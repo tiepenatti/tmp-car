@@ -1,0 +1,313 @@
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 24px 28px 32px;
+  border-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+}
+
+.connection-panel {
+  text-align: center;
+}
+
+.connection-panel h1 {
+  margin: 0 0 18px;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+}
+
+.connection-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.connect-button {
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #0ea5e9, #22c55e);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.85rem 1.25rem;
+  cursor: pointer;
+}
+
+.connect-button:hover,
+.disconnect-button:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.disconnect-button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.85rem 1.25rem;
+  cursor: pointer;
+}
+
+.disconnect-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.status {
+  margin: 14px 0 4px;
+  opacity: 0.92;
+}
+
+.hint {
+  margin: 0;
+  opacity: 0.72;
+}
+
+.controller-layout {
+  margin-top: 26px;
+}
+
+.sensor-panel {
+  margin-top: 28px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sensor-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.sensor-panel-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.sensor-badge {
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sensor-badge-live {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+
+.sensor-reading {
+  margin-top: 12px;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-weight: 800;
+}
+
+.sensor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  opacity: 0.82;
+  font-size: 0.9rem;
+}
+
+.sensor-raw {
+  margin: 12px 0 0;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.88rem;
+  opacity: 0.76;
+  word-break: break-all;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(88px, 1fr));
+  gap: 12px;
+}
+
+.control-button {
+  min-height: 78px;
+  border: 0;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.control-button:active {
+  transform: scale(0.98);
+}
+
+.stop-button {
+  color: #ffffff;
+  background: #ef4444;
+}
+
+.command-log-panel {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.command-log-columns {
+  display: grid;
+  grid-template-columns: 56px 150px 170px 70px minmax(280px, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.command-log-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.command-log-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+
+.command-log-header p {
+  margin: 0;
+  opacity: 0.72;
+}
+
+.clear-log-button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: transparent;
+  color: #f8fafc;
+  cursor: pointer;
+  padding: 0.6rem 0.9rem;
+}
+
+.command-log-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.command-log-empty {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.command-log-entry {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.command-log-entry-tx {
+  border-left: 4px solid #22c55e;
+}
+
+.command-log-entry-rx {
+  border-left: 4px solid #38bdf8;
+}
+
+.command-log-entry-err {
+  border-left: 4px solid #ef4444;
+}
+
+.command-log-row {
+  display: grid;
+  grid-template-columns: 56px 150px 170px 70px minmax(280px, 1fr);
+  gap: 10px;
+  align-items: start;
+  font-size: 0.84rem;
+  opacity: 0.85;
+}
+
+.command-log-direction {
+  font-weight: 700;
+}
+
+.command-log-time {
+  white-space: nowrap;
+}
+
+.command-log-summary {
+  font-weight: 600;
+}
+
+.command-log-detail {
+  margin: 4px 0 0 466px;
+  font-size: 0.83rem;
+  opacity: 0.78;
+}
+
+.command-log-note {
+  margin: 4px 0 0 466px;
+  color: #fca5a5;
+  font-size: 0.83rem;
+}
+
+.command-log-bytes {
+  display: block;
+  margin-top: 4px;
+  margin-left: 466px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.78rem;
+  opacity: 0.55;
+  word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .connection-actions {
+    flex-direction: column;
+  }
+
+  .command-log-header {
+    flex-direction: column;
+  }
+
+  .command-log-columns {
+    display: none;
+  }
+
+  .command-log-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .command-log-detail,
+  .command-log-note,
+  .command-log-bytes {
+    margin-left: 0;
+  }
+
+  .sensor-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .control-button {
+    min-height: 70px;
+    font-size: 1rem;
+  }
+}
