@@ -1,7 +1,9 @@
 import { CommandLogPanel } from './components/CommandLogPanel'
 import { ConnectionPanel } from './components/ConnectionPanel'
+import { ControlHelpPanel } from './components/ControlHelpPanel'
 import { ControlPad } from './components/ControlPad'
 import { SensorPanel } from './components/SensorPanel'
+import { ServoSettingsPanel } from './components/ServoSettingsPanel'
 import { useLegoHubController } from './hooks/useLegoHubController'
 import './App.css'
 
@@ -10,6 +12,11 @@ function App() {
     connected,
     status,
     drivePower,
+    servoPulseMs,
+    setServoPulseMs,
+    servoSpeedPct,
+    setServoSpeedPct,
+    servoPosition,
     commandLog,
     distanceSensor,
     connect,
@@ -19,6 +26,7 @@ function App() {
     stopSteering,
     setDrive,
     stopAll,
+    forceStopSteering,
   } = useLegoHubController()
 
   return (
@@ -36,8 +44,17 @@ function App() {
         setDrive={setDrive}
         stopAll={stopAll}
       />
-      <SensorPanel distanceSensor={distanceSensor} />
+      <ServoSettingsPanel
+        servoPulseMs={servoPulseMs}
+        setServoPulseMs={setServoPulseMs}
+        servoSpeedPct={servoSpeedPct}
+        setServoSpeedPct={setServoSpeedPct}
+        servoPosition={servoPosition}
+        forceStopSteering={forceStopSteering}
+      />
+      <SensorPanel distanceSensor={distanceSensor} servoPulseMs={servoPulseMs} servoSpeedPct={servoSpeedPct} servoPosition={servoPosition} />
       <CommandLogPanel entries={commandLog} onClear={clearCommandLog} />
+      <ControlHelpPanel />
     </main>
   )
 }

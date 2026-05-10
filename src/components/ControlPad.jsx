@@ -34,7 +34,7 @@ export function ControlPad({
         <HoldButton
           className="control-button"
           label="FWD"
-          onPress={() => setDrive(drivePower)}
+          onPress={() => setDrive(-drivePower)}
           onRelease={() => setDrive(0)}
         />
         <div></div>
@@ -61,7 +61,7 @@ export function ControlPad({
         <HoldButton
           className="control-button"
           label="BWD"
-          onPress={() => setDrive(-drivePower)}
+          onPress={() => setDrive(drivePower)}
           onRelease={() => setDrive(0)}
         />
         <div></div>

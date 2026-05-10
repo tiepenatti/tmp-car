@@ -19,17 +19,17 @@ const MODE_INFO_VALUE_FORMAT = 0x80
 const DISTANCE_DELTA = 1
 
 const DRIVE_BRAKE_POWER = 127
-const DRIVE_POWER = 70
-const STEERING_SPEED = 18
-const STEERING_STEP_DEGREES = 8
-const STEERING_LIMIT_DEGREES = 75
-const STEERING_REPEAT_DELAY_MS = 220
-const STEERING_REPEAT_INTERVAL_MS = 110
+const DRIVE_POWER = 100
+const PORT_D_TEST_POWER = 100
+const STEERING_SPEED = 60
+const STEERING_STEP = 8
+const STEERING_MAX = 40
 const MAX_POWER = 100
 const HOLD_END_STATE = 126
+const FLOAT_END_STATE = 0
 const STARTUP_AND_COMPLETION = 0x11
+const STARTUP_IMMEDIATE = 0x01
 const COMMAND_LOG_LIMIT = 80
-const RESEND_INTERVAL_MS = 120
 
 const DATA_FORMAT_LABELS = {
   0x00: 'DATA8',
@@ -185,13 +185,15 @@ function describeMessage(label, payload, note) {
     if (subCommand === 0x0d && bytes.length >= 14) {
       const target = int32FromBytes(bytes, 6)
       const speed = bytes[10]
+      const maxPower = bytes[11]
       const endState = bytes[12]
+      const useProfile = bytes[13]
 
       return {
         typeLabel: 'Motor command',
         portLabel: portName(port),
         summary: `Steer to ${target} deg`,
-        detail: `GotoAbsolutePosition at ${speed}% speed, end ${endStateName(endState)}`,
+        detail: `GotoAbsolutePosition speed ${speed}%, max power ${maxPower}%, end ${endStateName(endState)}, profile ${useProfile}`,
       }
     }
 
@@ -337,13 +339,12 @@ function buildGoToAbsolutePositionCommand(port, position, speed) {
     0x00,
     PORT_OUTPUT_COMMAND,
     port,
-    STARTUP_AND_COMPLETION,
+    STARTUP_IMMEDIATE,
     0x0d,
     ...int32ToBytes(position),
     speed,
     MAX_POWER,
-    0x00,
-    HOLD_END_STATE,
+    FLOAT_END_STATE,
     0x00,
   ])
 }
@@ -414,6 +415,9 @@ export function useLegoHubController() {
   const [status, setStatus] = useState('Disconnected')
   const [connected, setConnected] = useState(false)
   const [commandLog, setCommandLog] = useState([])
+  const [servoPulseMs, setServoPulseMs] = useState(50)
+  const [servoSpeedPct, setServoSpeedPct] = useState(100)
+  const [servoPosition, setServoPosition] = useState(0)
   const [distanceSensor, setDistanceSensor] = useState({
     value: null,
     raw: '',
@@ -426,15 +430,16 @@ export function useLegoHubController() {
 
   const deviceRef = useRef(null)
   const characteristicRef = useRef(null)
+
   const driveSpeedRef = useRef(0)
   const steeringTargetRef = useRef(0)
-  const sendIntervalRef = useRef(null)
-  const steeringRepeatRef = useRef({
-    direction: 0,
-    source: null,
-    delayTimer: null,
-    repeatTimer: null,
-  })
+  const portDSpeedRef = useRef(0)
+
+  const updateSteeringTarget = useCallback((value) => {
+    steeringTargetRef.current = value
+    setServoPosition(value)
+  }, [])
+
   const distanceFormatRef = useRef({
     mode: DISTANCE_SENSOR_MODE,
     dataFormat: 0x00,
@@ -446,6 +451,9 @@ export function useLegoHubController() {
     ArrowDown: false,
     ArrowLeft: false,
     ArrowRight: false,
+    w: false,
+    s: false,
+    d: false,
   })
 
   const clearPressedKeys = useCallback(() => {
@@ -454,6 +462,9 @@ export function useLegoHubController() {
       ArrowDown: false,
       ArrowLeft: false,
       ArrowRight: false,
+      w: false,
+      s: false,
+      d: false,
     }
   }, [])
 
@@ -482,22 +493,7 @@ export function useLegoHubController() {
     setCommandLog([])
   }, [])
 
-  const clearSteeringRepeat = useCallback(() => {
-    if (steeringRepeatRef.current.delayTimer) {
-      clearTimeout(steeringRepeatRef.current.delayTimer)
-    }
 
-    if (steeringRepeatRef.current.repeatTimer) {
-      clearInterval(steeringRepeatRef.current.repeatTimer)
-    }
-
-    steeringRepeatRef.current = {
-      direction: 0,
-      source: null,
-      delayTimer: null,
-      repeatTimer: null,
-    }
-  }, [])
 
   const handleNotification = useCallback(
     (event) => {
@@ -568,9 +564,9 @@ export function useLegoHubController() {
       datasets: 1,
       decimals: 0,
     }
-    steeringTargetRef.current = 0
+    updateSteeringTarget(0)
     driveSpeedRef.current = 0
-    clearSteeringRepeat()
+    portDSpeedRef.current = 0
     clearPressedKeys()
     setDistanceSensor({
       value: null,
@@ -583,19 +579,20 @@ export function useLegoHubController() {
     })
     setConnected(false)
     setStatus('Disconnected')
-  }, [clearPressedKeys, clearSteeringRepeat, handleNotification])
+  }, [clearPressedKeys, handleNotification, updateSteeringTarget])
 
   const writeCommand = useCallback(
     async (label, command) => {
       const characteristic = characteristicRef.current
-      if (!characteristic) return
+      if (!characteristic) return false
 
       appendLog('TX', label, command)
-
       try {
-        await characteristic.writeValue(command)
+        await characteristic.writeValueWithoutResponse(command)
+        return true
       } catch (error) {
         appendLog('ERR', label, command, String(error))
+        return false
       }
     },
     [appendLog],
@@ -609,37 +606,47 @@ export function useLegoHubController() {
     [writeCommand],
   )
 
-  const zeroSteeringEncoder = useCallback(async () => {
-    steeringTargetRef.current = 0
-    await writeCommand('Zero steering encoder', buildPresetEncoderCommand(PORT_A, 0))
-  }, [writeCommand])
+  const sendPortDPower = useCallback(
+    async (power, label = 'Port D test') => {
+      if (portDSpeedRef.current === power) {
+        return
+      }
 
-  const goToSteeringTarget = useCallback(
-    async (target, label = 'Steering target') => {
-      const nextTarget = clamp(target, -STEERING_LIMIT_DEGREES, STEERING_LIMIT_DEGREES)
-      steeringTargetRef.current = nextTarget
-
-      await writeCommand(
-        label,
-        buildGoToAbsolutePositionCommand(PORT_A, nextTarget, STEERING_SPEED),
-      )
+      portDSpeedRef.current = power
+      await writeCommand(label, buildStartPowerCommand(PORT_D, power))
     },
     [writeCommand],
   )
 
-  const stepSteering = useCallback(
-    async (direction, sourceLabel) => {
-      const nextTarget = steeringTargetRef.current + direction * STEERING_STEP_DEGREES
-      if (clamp(nextTarget, -STEERING_LIMIT_DEGREES, STEERING_LIMIT_DEGREES) === steeringTargetRef.current) {
+  const forceStopSteering = useCallback(async () => {
+    const characteristic = characteristicRef.current
+    if (!characteristic) return
+
+    updateSteeringTarget(0)
+    const cmd = buildStartPowerCommand(PORT_A, 0)
+    appendLog('TX', 'FORCE STOP steering', cmd)
+    try {
+      await characteristic.writeValueWithoutResponse(cmd)
+    } catch (error) {
+      appendLog('ERR', 'FORCE STOP steering', cmd, String(error))
+    }
+  }, [appendLog, updateSteeringTarget])
+
+  const zeroSteeringEncoder = useCallback(async () => {
+    updateSteeringTarget(0)
+    await writeCommand('Zero steering encoder', buildPresetEncoderCommand(PORT_A, 0))
+  }, [updateSteeringTarget, writeCommand])
+
+  const steerTo = useCallback(
+    async (target, label) => {
+      if (steeringTargetRef.current === target) {
         return
       }
 
-      await goToSteeringTarget(
-        nextTarget,
-        `${sourceLabel} ${direction < 0 ? 'left' : 'right'} to ${clamp(nextTarget, -STEERING_LIMIT_DEGREES, STEERING_LIMIT_DEGREES)}deg`,
-      )
+      updateSteeringTarget(target)
+      await writeCommand(label, buildGoToAbsolutePositionCommand(PORT_A, target, STEERING_SPEED))
     },
-    [goToSteeringTarget],
+    [updateSteeringTarget, writeCommand],
   )
 
   const requestDistanceSensorFormat = useCallback(async () => {
@@ -658,6 +665,10 @@ export function useLegoHubController() {
 
   const setDrive = useCallback(
     async (power) => {
+      if (driveSpeedRef.current === power) {
+        return
+      }
+
       driveSpeedRef.current = power
 
       if (power === 0) {
@@ -670,24 +681,28 @@ export function useLegoHubController() {
     [sendDrivePower],
   )
 
-  const stopSteering = useCallback(() => {
-    clearSteeringRepeat()
-  }, [clearSteeringRepeat])
+  const stopSteering = useCallback(async () => {
+    await steerTo(0, 'Center steering')
+  }, [steerTo])
 
   const startSteering = useCallback(
-    async (direction, source = 'ui') => {
-      clearSteeringRepeat()
-      await stepSteering(direction, 'Steering tap')
-
-      steeringRepeatRef.current.direction = direction
-      steeringRepeatRef.current.source = source
-      steeringRepeatRef.current.delayTimer = window.setTimeout(() => {
-        steeringRepeatRef.current.repeatTimer = window.setInterval(() => {
-          stepSteering(direction, 'Steering hold')
-        }, STEERING_REPEAT_INTERVAL_MS)
-      }, STEERING_REPEAT_DELAY_MS)
+    async (direction) => {
+      const target = direction < 0 ? -STEERING_MAX : STEERING_MAX
+      await steerTo(target, `Steer ${direction < 0 ? 'left' : 'right'}`)
     },
-    [clearSteeringRepeat, stepSteering],
+    [steerTo],
+  )
+
+  const stepSteering = useCallback(
+    async (direction) => {
+      const next = clamp(
+        steeringTargetRef.current + direction * STEERING_STEP,
+        -STEERING_MAX,
+        STEERING_MAX,
+      )
+      await steerTo(next, `Steer ${direction < 0 ? 'left' : 'right'} → ${next}°`)
+    },
+    [steerTo],
   )
 
   const syncDriveFromKeyboard = useCallback(async () => {
@@ -696,9 +711,9 @@ export function useLegoHubController() {
     if (keys.ArrowUp === keys.ArrowDown) {
       await setDrive(0)
     } else if (keys.ArrowUp) {
-      await setDrive(DRIVE_POWER)
-    } else {
       await setDrive(-DRIVE_POWER)
+    } else {
+      await setDrive(DRIVE_POWER)
     }
   }, [setDrive])
 
@@ -755,14 +770,6 @@ export function useLegoHubController() {
       await zeroSteeringEncoder()
       await requestDistanceSensorFormat()
       await enableDistanceSensorNotifications()
-
-      if (!sendIntervalRef.current) {
-        sendIntervalRef.current = setInterval(() => {
-          if (driveSpeedRef.current !== 0) {
-            sendDrivePower(driveSpeedRef.current, 'Drive keepalive')
-          }
-        }, RESEND_INTERVAL_MS)
-      }
     } catch (error) {
       setStatus(`Error: ${String(error)}`)
       console.error(error)
@@ -772,25 +779,115 @@ export function useLegoHubController() {
     handleDisconnected,
     handleNotification,
     requestDistanceSensorFormat,
-    sendDrivePower,
     zeroSteeringEncoder,
   ])
 
   useEffect(() => {
+    const steeringTestHeld = { current: false }
+
     const onKeyDown = (event) => {
-      if (!(event.key in pressedKeysRef.current)) return
+      const key = event.shiftKey && event.key.toLowerCase() === 'd' ? 'Shift+d' : event.key
+
+      if (key === 'd' || key === 'Shift+d') {
+        if (!pressedKeysRef.current.d) {
+          pressedKeysRef.current.d = true
+          event.preventDefault()
+
+          const power = key === 'Shift+d' ? -PORT_D_TEST_POWER : PORT_D_TEST_POWER
+          sendPortDPower(power, `Port D test ${power > 0 ? 'forward' : 'reverse'} 100%`)
+        }
+        return
+      }
+
+      // Steering test keys (numpad-style layout)
+      if (key === '5') {
+        event.preventDefault()
+        forceStopSteering()
+        return
+      }
+
+      if (key === '8') {
+        event.preventDefault()
+        setServoPulseMs((s) => Math.min(1000, s + 20))
+        return
+      }
+
+      if (key === '2') {
+        event.preventDefault()
+        setServoPulseMs((s) => Math.max(30, s - 20))
+        return
+      }
+
+      if (key === 'PageUp') {
+        event.preventDefault()
+        setServoSpeedPct((s) => Math.min(100, s + 10))
+        return
+      }
+
+      if (key === 'PageDown') {
+        event.preventDefault()
+        setServoSpeedPct((s) => Math.max(10, s - 10))
+        return
+      }
+
+      if (key === '7' || key === '9') {
+        event.preventDefault()
+        if (!steeringTestHeld.current) {
+          steeringTestHeld.current = true
+          const power = key === '7' ? -servoSpeedPct : servoSpeedPct
+          writeCommand(`Steer test ${key === '7' ? 'left' : 'right'} ${servoSpeedPct}%`, buildStartPowerCommand(PORT_A, power))
+        }
+        return
+      }
+
+      if (key === '4' || key === '6') {
+        event.preventDefault()
+        const power = key === '4' ? -servoSpeedPct : servoSpeedPct
+        const dir = key === '4' ? 'left' : 'right'
+        const pulseMs = servoPulseMs * 2
+        writeCommand(`Steer pulse ${dir} ${servoSpeedPct}% ${pulseMs}ms`, buildStartPowerCommand(PORT_A, power))
+        setTimeout(() => {
+          writeCommand(`Steer pulse brake`, buildStartPowerCommand(PORT_A, 127))
+        }, pulseMs)
+        return
+      }
+
+      if (key === '1' || key === '3') {
+        event.preventDefault()
+        const power = key === '1' ? -servoSpeedPct : servoSpeedPct
+        const dir = key === '1' ? 'left' : 'right'
+        writeCommand(`Steer pulse ${dir} ${servoSpeedPct}% ${servoPulseMs}ms`, buildStartPowerCommand(PORT_A, power))
+        setTimeout(() => {
+          writeCommand(`Steer pulse brake`, buildStartPowerCommand(PORT_A, 127))
+        }, servoPulseMs)
+        return
+      }
+
+      if (key === 'ArrowLeft') {
+        event.preventDefault()
+        stepSteering(-1)
+        return
+      }
+
+      if (key === 'ArrowRight') {
+        event.preventDefault()
+        stepSteering(1)
+        return
+      }
+
+      if (!(key in pressedKeysRef.current)) return
       event.preventDefault()
 
-      if (!pressedKeysRef.current[event.key]) {
-        pressedKeysRef.current[event.key] = true
+      if (!pressedKeysRef.current[key]) {
+        pressedKeysRef.current[key] = true
 
-        if (event.key === 'ArrowLeft') {
-          startSteering(-1, 'ArrowLeft')
+        if (key === 'w') {
+          sendDrivePower(-100, 'Drive fwd')
           return
         }
 
-        if (event.key === 'ArrowRight') {
-          startSteering(1, 'ArrowRight')
+        if (key === 's') {
+          sendDrivePower(100, 'Drive bwd')
           return
         }
 
@@ -799,18 +896,37 @@ export function useLegoHubController() {
     }
 
     const onKeyUp = (event) => {
-      if (!(event.key in pressedKeysRef.current)) return
-      event.preventDefault()
+      const key = event.shiftKey && event.key.toLowerCase() === 'd' ? 'Shift+d' : event.key
 
-      pressedKeysRef.current[event.key] = false
-
-      if (event.key === 'ArrowLeft') {
-        stopSteering()
+      if (key === 'd' || key === 'Shift+d') {
+        pressedKeysRef.current.d = false
+        event.preventDefault()
+        sendPortDPower(0, 'Port D stop')
         return
       }
 
-      if (event.key === 'ArrowRight') {
-        stopSteering()
+      if (key === '7' || key === '9') {
+        event.preventDefault()
+        steeringTestHeld.current = false
+        writeCommand('Steer test stop', buildStartPowerCommand(PORT_A, 0))
+        return
+      }
+
+      if (!(key in pressedKeysRef.current)) return
+      event.preventDefault()
+
+      if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        event.preventDefault()
+        return
+      }
+
+      if (!(key in pressedKeysRef.current)) return
+      event.preventDefault()
+
+      pressedKeysRef.current[key] = false
+
+      if (key === 'w' || key === 's') {
+        sendDrivePower(0, 'Drive stop')
         return
       }
 
@@ -823,20 +939,19 @@ export function useLegoHubController() {
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
-
-      if (sendIntervalRef.current) {
-        clearInterval(sendIntervalRef.current)
-        sendIntervalRef.current = null
-      }
     }
-  }, [startSteering, stopSteering, syncDriveFromKeyboard])
+  }, [stepSteering, syncDriveFromKeyboard, sendDrivePower, sendPortDPower, forceStopSteering, writeCommand, servoPulseMs, servoSpeedPct, updateSteeringTarget])
 
   return {
     connected,
     status,
     commandLog,
     distanceSensor,
-    steeringPower: STEERING_SPEED,
+    servoPulseMs,
+    setServoPulseMs,
+    servoSpeedPct,
+    setServoSpeedPct,
+    servoPosition,
     drivePower: DRIVE_POWER,
     connect,
     disconnect,
@@ -845,5 +960,6 @@ export function useLegoHubController() {
     stopSteering,
     setDrive,
     stopAll,
+    forceStopSteering,
   }
 }

@@ -213,65 +213,204 @@
 }
 
 .command-log-entry {
-  padding: 8px 10px;
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 4px;
+  font-size: 0.82rem;
+  opacity: 0.9;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .command-log-entry-tx {
-  border-left: 4px solid #22c55e;
+  border-left-color: #22c55e;
 }
 
 .command-log-entry-rx {
-  border-left: 4px solid #38bdf8;
+  border-left-color: #38bdf8;
 }
 
 .command-log-entry-err {
-  border-left: 4px solid #ef4444;
-}
-
-.command-log-row {
-  display: grid;
-  grid-template-columns: 56px 150px 170px 70px minmax(280px, 1fr);
-  gap: 10px;
-  align-items: start;
-  font-size: 0.84rem;
-  opacity: 0.85;
+  border-left-color: #ef4444;
 }
 
 .command-log-direction {
   font-weight: 700;
+  min-width: 38px;
 }
 
 .command-log-time {
   white-space: nowrap;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.command-log-type {
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.command-log-port {
+  min-width: 40px;
+  flex-shrink: 0;
 }
 
 .command-log-summary {
   font-weight: 600;
+  flex-grow: 1;
+  min-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .command-log-detail {
-  margin: 4px 0 0 466px;
-  font-size: 0.83rem;
-  opacity: 0.78;
+  opacity: 0.75;
+  font-size: 0.79rem;
+  min-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .command-log-note {
-  margin: 4px 0 0 466px;
   color: #fca5a5;
-  font-size: 0.83rem;
+  font-size: 0.79rem;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .command-log-bytes {
-  display: block;
-  margin-top: 4px;
-  margin-left: 466px;
   font-family: Consolas, 'Courier New', monospace;
-  font-size: 0.78rem;
-  opacity: 0.55;
-  word-break: break-all;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 100px;
+}
+
+/* Servo Settings Panel */
+.servo-settings-panel {
+  margin-top: 28px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.servo-settings-panel h2 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+
+.servo-settings-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.servo-setting {
+  flex: 1;
+  min-width: 200px;
+}
+
+.servo-setting label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.servo-setting-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.servo-setting-controls input[type="range"] {
+  flex: 1;
+  accent-color: #22c55e;
+  height: 6px;
+}
+
+.servo-btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.servo-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.servo-btn-stop {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.servo-btn-stop:hover {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+/* Control Help Panel */
+.control-help-panel {
+  margin-top: 28px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.control-help-panel h2 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+
+.control-help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.control-help-group h3 {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.control-help-group dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 0.85rem;
+}
+
+.control-help-group dt {
+  font-weight: 700;
+  font-family: Consolas, 'Courier New', monospace;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.control-help-group dd {
+  margin: 0;
+  opacity: 0.72;
 }
 
 @media (max-width: 640px) {

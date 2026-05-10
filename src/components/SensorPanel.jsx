@@ -16,9 +16,17 @@ function formatSensorValue(value, decimals) {
   return String(value)
 }
 
-export function SensorPanel({ distanceSensor }) {
+export function SensorPanel({ distanceSensor, servoPulseMs, servoSpeedPct, servoPosition }) {
   return (
     <section className="sensor-panel">
+      <div className="servo-speed">
+        <strong>Pulse:</strong> {servoPulseMs}ms <span style={{ opacity: 0.5 }}>(2/8 ±20ms)</span>
+        &nbsp;&nbsp;
+        <strong>Speed:</strong> {servoSpeedPct}% <span style={{ opacity: 0.5 }}>(PgDn/PgUp ±10)</span>
+        &nbsp;&nbsp;
+        <strong>Position:</strong> {servoPosition}°
+      </div>
+
       <div className="sensor-panel-header">
         <h2>Distance Sensor</h2>
         <span className={`sensor-badge ${distanceSensor.notifyEnabled ? 'sensor-badge-live' : ''}`}>

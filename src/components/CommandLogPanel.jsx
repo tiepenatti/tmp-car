@@ -24,18 +24,16 @@ export function CommandLogPanel({ entries, onClear }) {
           <p className="command-log-empty">No Bluetooth traffic yet.</p>
         ) : (
           entries.map((entry) => (
-            <article key={entry.id} className={`command-log-entry command-log-entry-${entry.direction.toLowerCase()}`}>
-              <div className="command-log-row">
-                <span className="command-log-direction">{entry.direction}</span>
-                <span className="command-log-time">{entry.time}</span>
-                <span>{entry.typeLabel}</span>
-                <span>{entry.portLabel}</span>
-                <span className="command-log-summary">{entry.label}</span>
-              </div>
-              {entry.detail ? <p className="command-log-detail">{entry.detail}</p> : null}
-              {entry.note ? <p className="command-log-note">{entry.note}</p> : null}
+            <div key={entry.id} className={`command-log-entry command-log-entry-${entry.direction.toLowerCase()}`}>
+              <span className="command-log-direction">{entry.direction}</span>
+              <span className="command-log-time">{entry.time}</span>
+              <span className="command-log-type">{entry.typeLabel}</span>
+              <span className="command-log-port">{entry.portLabel}</span>
+              <span className="command-log-summary">{entry.label}</span>
+              {entry.detail ? <span className="command-log-detail">{entry.detail}</span> : null}
+              {entry.note ? <span className="command-log-note">{entry.note}</span> : null}
               <code className="command-log-bytes">{entry.bytes}</code>
-            </article>
+            </div>
           ))
         )}
       </div>
